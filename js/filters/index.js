@@ -16,6 +16,7 @@ import { thumbnailFilter }  from './thumbnail.js';
 import { gpsFilter }        from './gps.js';
 import { quantizationFilter } from './quantization.js';
 import { stringsFilter }    from './strings.js';
+import { autodetectFilter } from './autodetect.js';
 
 export const FILTERS = {
   channel:   channelFilter,
@@ -36,6 +37,7 @@ export const FILTERS = {
   gps:       gpsFilter,
   quantization: quantizationFilter,
   strings:   stringsFilter,
+  autodetect: autodetectFilter,
 };
 
 /**
