@@ -85,7 +85,7 @@ function exportCurrentImage() {
   const entry = state.history[state.activeHistoryIdx];
   if (!entry) return;
   entry.canvas.toBlob(
-    blob => downloadBlob(blob, `rapidforensics-step${state.activeHistoryIdx + 1}.png`),
+    blob => downloadBlob(blob, `stegascope-step${state.activeHistoryIdx + 1}.png`),
     'image/png',
   );
 }
