@@ -1,4 +1,4 @@
-# StegaScope
+# StegoScope
 
 Browser-based image forensics tool for CTF players and forensics analysts. Drop an image, inspect it through a grid of forensic filters, and iteratively drill down by promoting filtered outputs as the new base image.
 
