@@ -304,6 +304,8 @@ function buildTileEl(tile, idx) {
   wrap.className = 'tile-canvas-wrap';
 
   if (filter?.meta) {
+    const { width: iw, height: ih } = state.baseImageData;
+    wrap.style.aspectRatio = `${iw} / ${ih}`;
     const pre = document.createElement('div');
     pre.className = 'tile-meta-content';
     pre.textContent = 'Loading…';

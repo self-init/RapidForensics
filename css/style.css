@@ -308,7 +308,7 @@ html, body {
   padding: 10px;
   align-items: flex-start;
   overflow-y: auto;
-  max-height: 180px;
+  max-height: 200px;
 }
 .tile-meta-content {
   font-family: 'Menlo', 'Consolas', monospace;
