@@ -740,6 +740,7 @@ function markDirty() {
 
 function updatePromoteBtn() {
   const filter = FILTERS[state.tiles[state.panelTileIdx]?.filterId];
+  promoteBtn.disabled = !!filter?.meta;
   if (filter?.slow && state.panelDirty) {
     applyBtn.hidden = false;
     promoteBtn.textContent = 'Apply & Promote';
@@ -754,7 +755,7 @@ function updatePromoteBtn() {
 
 function updateExportBtn() {
   const tile = state.panelTileIdx >= 0 ? state.tiles[state.panelTileIdx] : null;
-  exportTileBtn.disabled = !tile?.resultImageData || !!FILTERS[tile.filterId]?.meta;
+  exportTileBtn.disabled = !tile?.resultImageData;
 }
 
 // Live preview for fast filters
@@ -780,17 +781,36 @@ applyBtn.addEventListener('click', async () => {
 
 // Export tile
 exportTileBtn.addEventListener('click', () => {
-  const tile = state.tiles[state.panelTileIdx];
-  if (!tile?.resultImageData || FILTERS[tile.filterId]?.meta) return;
+  const tile   = state.tiles[state.panelTileIdx];
+  const filter = FILTERS[tile?.filterId];
+  if (!tile?.resultImageData) return;
+
+  const safeName = `${filter?.name ?? tile.filterId}-${tile.presetName ?? ''}`
+    .replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
+
+  if (filter?.meta) {
+    const text = metaResultToText(tile.resultImageData);
+    downloadBlob(new Blob([text], { type: 'text/plain' }), `${safeName}.txt`);
+    return;
+  }
+
   const tmp = document.createElement('canvas');
   tmp.width  = tile.resultImageData.width;
   tmp.height = tile.resultImageData.height;
   tmp.getContext('2d').putImageData(tile.resultImageData, 0, 0);
-  const filter   = FILTERS[tile.filterId];
-  const safeName = `${filter?.name ?? tile.filterId}-${tile.presetName ?? ''}`
-    .replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
   tmp.toBlob(blob => downloadBlob(blob, `${safeName}.png`), 'image/png');
 });
+
+function metaResultToText(result) {
+  if (result?.text) return result.text;
+  if (Array.isArray(result?.entries)) {
+    return result.entries.map(e => `${e.label ?? ''}: ${e.detail ?? ''}`).join('\n');
+  }
+  if (result?.entries) {
+    return Object.entries(result.entries).map(([k, v]) => `${k}: ${v}`).join('\n');
+  }
+  return '';
+}
 
 // Arrow nav from Promote/Apply buttons into panel controls
 [promoteBtn, applyBtn].forEach(btn => {
