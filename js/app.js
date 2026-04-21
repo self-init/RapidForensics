@@ -347,10 +347,12 @@ function buildTileEl(tile, idx) {
   el.appendChild(wrap);
   el.appendChild(footer);
 
-  // Click image area → open properties panel
+  // Click → open properties panel; double-click → promote directly
   wrap.style.cursor = 'pointer';
   wrap.addEventListener('click', e => { e.stopPropagation(); focusTile(idx); openPanel(idx); });
+  wrap.addEventListener('dblclick', e => { e.stopPropagation(); focusTile(idx); promote(idx); });
   footer.addEventListener('click', e => { e.stopPropagation(); focusTile(idx); openPanel(idx); });
+  footer.addEventListener('dblclick', e => { e.stopPropagation(); focusTile(idx); promote(idx); });
 
   el.addEventListener('focus',   () => { state.focusedTileIdx = idx; el.classList.add('focused'); });
   el.addEventListener('blur',    () => el.classList.remove('focused'));
