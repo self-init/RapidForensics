@@ -825,7 +825,7 @@ function updateKeybindBar() {
       kb('Enter', 'Open filter') +
       kb('Space', 'Preview') +
       kb('Esc', 'Deselect') +
-      kb('Ctrl+1–5', 'Switch tab');
+      kb('Ctrl+1–7', 'Switch tab');
     return;
   }
 
@@ -833,7 +833,7 @@ function updateKeybindBar() {
   keybindBar.innerHTML =
     kb('↑↓←→', 'Navigate tiles') +
     kb('Space', 'Preview') +
-    kb('Ctrl+1–5', 'Switch tab');
+    kb('Ctrl+1–7', 'Switch tab');
 }
 
 // Also handle Escape for preview when overlay is open
