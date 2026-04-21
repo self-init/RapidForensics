@@ -8,6 +8,7 @@ import { frequencyFilter }  from './frequency.js';
 import { cloneFilter }      from './clone.js';
 import { metadataFilter }   from './metadata.js';
 import { bitplaneFilter }   from './bitplane.js';
+import { pcaFilter }        from './pca.js';
 
 export const FILTERS = {
   channel:   channelFilter,
@@ -20,6 +21,7 @@ export const FILTERS = {
   clone:     cloneFilter,
   metadata:  metadataFilter,
   bitplane:  bitplaneFilter,
+  pca:       pcaFilter,
 };
 
 /**
