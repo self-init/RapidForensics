@@ -7,6 +7,17 @@ import { labFilter }        from './lab.js';
 import { frequencyFilter }  from './frequency.js';
 import { cloneFilter }      from './clone.js';
 import { metadataFilter }   from './metadata.js';
+import { bitplaneFilter }   from './bitplane.js';
+import { bitplaneXorFilter } from './bitplane-xor.js';
+import { pcaFilter }        from './pca.js';
+import { waveletFilter }    from './wavelet.js';
+import { histogramFilter }  from './histogram.js';
+import { jpegGhostFilter }  from './jpeg-ghost.js';
+import { thumbnailFilter }  from './thumbnail.js';
+import { gpsFilter }        from './gps.js';
+import { quantizationFilter } from './quantization.js';
+import { stringsFilter }    from './strings.js';
+import { autodetectFilter } from './autodetect.js';
 
 export const FILTERS = {
   channel:   channelFilter,
@@ -18,6 +29,17 @@ export const FILTERS = {
   frequency: frequencyFilter,
   clone:     cloneFilter,
   metadata:  metadataFilter,
+  bitplane:  bitplaneFilter,
+  'bitplane-xor': bitplaneXorFilter,
+  pca:       pcaFilter,
+  wavelet:   waveletFilter,
+  histogram: histogramFilter,
+  'jpeg-ghost': jpegGhostFilter,
+  thumbnail: thumbnailFilter,
+  gps:       gpsFilter,
+  quantization: quantizationFilter,
+  strings:   stringsFilter,
+  autodetect: autodetectFilter,
 };
 
 /**
