@@ -49,9 +49,15 @@ const menuDropdown          = document.getElementById('menu-dropdown');
 const menubar               = document.getElementById('menubar');
 const previewOverlay        = document.getElementById('preview-overlay');
 const previewCanvas         = document.getElementById('preview-canvas');
+const previewCanvasWrap    = document.getElementById('preview-canvas-wrap');
 const previewLabel          = document.getElementById('preview-label');
 const previewDims           = document.getElementById('preview-dims');
 const previewClose          = document.getElementById('preview-close');
+const previewSearchBar      = document.getElementById('preview-search-bar');
+const previewSearchInput    = document.getElementById('preview-search-input');
+const previewRegexBtn       = document.getElementById('preview-regex-btn');
+const previewCaseBtn        = document.getElementById('preview-case-btn');
+const previewTextOutput     = document.getElementById('preview-text-output');
 const keybindBar            = document.getElementById('keybind-bar');
 const zoomInBtn             = document.getElementById('zoom-in-btn');
 const zoomOutBtn            = document.getElementById('zoom-out-btn');
@@ -320,6 +326,22 @@ function buildTileEl(tile, idx) {
     pre.className = 'tile-meta-content';
     pre.textContent = 'Loading…';
     wrap.appendChild(pre);
+
+    // Magnifying glass — opens text preview
+    const zoomBtn = document.createElement('button');
+    zoomBtn.className = 'tile-zoom-btn';
+    zoomBtn.title = 'Preview (Space)';
+    zoomBtn.innerHTML = `<svg width="19" height="19" viewBox="0 0 16 16" fill="none"
+      stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <circle cx="6.5" cy="6.5" r="4.5"/>
+      <line x1="10.5" y1="10.5" x2="14.5" y2="14.5"/>
+    </svg>`;
+    zoomBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      focusTile(idx);
+      showPreview();
+    });
+    wrap.appendChild(zoomBtn);
   } else {
     const canvas = document.createElement('canvas');
     wrap.appendChild(canvas);
@@ -1087,10 +1109,11 @@ function restoreHistory(idx) {
 // Large image preview (Space — hold or tap-toggle)
 // =====================================================================
 const preview = {
-  visible:   false,
-  holdMode:  false,
-  holdTimer: null,
-  HOLD_MS:   180,
+  visible:      false,
+  holdMode:     false,
+  holdTimer:    null,
+  HOLD_MS:      180,
+  savedTileIdx: -1,
 };
 
 function showPreview() {
@@ -1098,19 +1121,45 @@ function showPreview() {
 
   const idx  = state.focusedTileIdx;
   const tile = idx >= 0 ? state.tiles[idx] : null;
-  const useFiltered = tile && tile.resultImageData && !FILTERS[tile.filterId]?.meta;
+  const filter = tile ? FILTERS[tile.filterId] : null;
+  const useFiltered = tile && tile.resultImageData && !filter?.meta;
 
-  const imgData = useFiltered ? tile.resultImageData : state.baseImageData;
-  const label   = useFiltered
-    ? `${FILTERS[tile.filterId]?.name} — ${tile.presetName}`
-    : 'Original';
+  // Restore focused tile after preview
+  preview.savedTileIdx = idx;
 
-  previewCanvas.width  = imgData.width;
-  previewCanvas.height = imgData.height;
-  previewCanvas.getContext('2d').putImageData(imgData, 0, 0);
-  previewLabel.textContent = label;
-  previewDims.innerHTML =
-    `${imgData.width} × ${imgData.height} &nbsp;·&nbsp; <kbd>Space</kbd> or <kbd>Esc</kbd> to close`;
+  // Hide all preview panes by default
+  previewSearchBar.hidden = true;
+  previewCanvasWrap.hidden = true;
+  previewTextOutput.hidden = true;
+  previewSearchInput.value = '';
+  previewRegexBtn.checked = false;
+  previewCaseBtn.checked = false;
+
+  if (filter?.meta && tile.resultImageData) {
+    // Text output
+    const result = tile.resultImageData;
+    const text = result?.text
+      ?? (Array.isArray(result?.entries) ? result.entries.map(e => `${e.label}: ${e.detail}`).join('\n') : '')
+      ?? '';
+    previewTextOutput.textContent = text;
+    previewTextOutput.hidden = false;
+    previewSearchBar.hidden = false;
+    previewLabel.textContent = `${filter.name} — ${tile.presetName}`;
+    previewDims.innerHTML = `${text.split('\n').length} lines &nbsp;·&nbsp; <kbd>Space</kbd> or <kbd>Esc</kbd> to close`;
+  } else {
+    // Image output
+    const imgData = useFiltered ? tile.resultImageData : state.baseImageData;
+    const label   = useFiltered
+      ? `${filter?.name} — ${tile.presetName}`
+      : 'Original';
+    previewCanvas.width  = imgData.width;
+    previewCanvas.height = imgData.height;
+    previewCanvas.getContext('2d').putImageData(imgData, 0, 0);
+    previewCanvasWrap.hidden = false;
+    previewLabel.textContent = label;
+    previewDims.innerHTML =
+      `${imgData.width} × ${imgData.height} &nbsp;·&nbsp; <kbd>Space</kbd> or <kbd>Esc</kbd> to close`;
+  }
 
   previewOverlay.classList.remove('hidden');
   previewClose.focus();
@@ -1122,6 +1171,9 @@ function hidePreview() {
   previewOverlay.classList.add('hidden');
   preview.visible  = false;
   preview.holdMode = false;
+  // Restore previously focused tile
+  if (preview.savedTileIdx >= 0) focusTile(preview.savedTileIdx);
+  preview.savedTileIdx = -1;
   updateKeybindBar();
 }
 
@@ -1129,6 +1181,51 @@ previewClose.addEventListener('click', hidePreview);
 previewOverlay.addEventListener('click', e => {
   if (e.target === previewOverlay || e.target.classList.contains('preview-canvas-wrap')) hidePreview();
 });
+
+// Search input handlers
+previewSearchInput.addEventListener('input', () => applyPreviewSearch());
+previewRegexBtn.addEventListener('change', () => applyPreviewSearch());
+previewCaseBtn.addEventListener('change', () => applyPreviewSearch());
+
+function applyPreviewSearch() {
+  const text = previewTextOutput.textContent || '';
+  const query = previewSearchInput.value;
+  if (!query) {
+    // Show all text, no highlights
+    previewTextOutput.innerHTML = escHtml(text);
+    return;
+  }
+  const regexMode = previewRegexBtn.checked;
+  const caseSensitive = previewCaseBtn.checked;
+  let regex;
+  try {
+    regex = regexMode
+      ? new RegExp(query, caseSensitive ? 'g' : 'gi')
+      : null;
+  } catch {
+    previewTextOutput.innerHTML = escHtml(text);
+    return;
+  }
+  if (regex) {
+    const highlighted = text.replace(regex, m => `<mark>${escHtml(m)}</mark>`);
+    previewTextOutput.innerHTML = highlighted;
+  } else {
+    const needle = caseSensitive ? query : query.toLowerCase();
+    const haystack = caseSensitive ? text : text.toLowerCase();
+    const idx = haystack.indexOf(needle);
+    if (idx === -1) {
+      previewTextOutput.innerHTML = escHtml(text);
+    } else {
+      // Highlight all occurrences
+      const regexAll = new RegExp(escapeRe(query), caseSensitive ? 'g' : 'gi');
+      previewTextOutput.innerHTML = text.replace(regexAll, m => `<mark>${escHtml(m)}</mark>`);
+    }
+  }
+}
+
+function escapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 function isInteractiveTarget(el) {
   return ['INPUT','SELECT','TEXTAREA','BUTTON'].includes(el.tagName);

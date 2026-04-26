@@ -99,9 +99,15 @@
       <span id="preview-label"></span>
       <button id="preview-close" title="Close (Esc or Space)">×</button>
     </div>
-    <div class="preview-canvas-wrap">
+    <div id="preview-search-bar" class="preview-search-bar hidden">
+      <input id="preview-search-input" type="text" placeholder="Search…" spellcheck="false" autocomplete="off"/>
+      <label class="search-opt"><input id="preview-regex-btn" type="checkbox"/> <span>.*</span></label>
+      <label class="search-opt"><input id="preview-case-btn" type="checkbox"/> <span>Aa</span></label>
+    </div>
+    <div id="preview-canvas-wrap" class="preview-canvas-wrap">
       <canvas id="preview-canvas"></canvas>
     </div>
+    <div id="preview-text-output" class="preview-text-output hidden"></div>
     <div class="preview-footer">
       <span id="preview-dims"></span>
     </div>
