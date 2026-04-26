@@ -540,10 +540,18 @@ function escHtml(str) {
 function updateMemoryInfo() {
   if (!state.baseImageData) return;
   let bytes = state.baseImageData.width * state.baseImageData.height * 4;
-  for (const tile of state.tiles) {
-    if (tile.resultImageData instanceof ImageData) {
-      bytes += tile.resultImageData.width * tile.resultImageData.height * 4;
+  const counted = new Set();
+  const countTileResult = r => {
+    if (r instanceof ImageData && !counted.has(r)) {
+      counted.add(r);
+      bytes += r.width * r.height * 4;
     }
+  };
+  for (const tile of state.tiles) {
+    countTileResult(tile.resultImageData);
+  }
+  for (const result of state.tileResultCache.values()) {
+    countTileResult(result);
   }
   const memStr = bytes >= 1048576
     ? `${(bytes / 1048576).toFixed(1)} MB`
