@@ -95,4 +95,24 @@ export class FilterWorkerPool {
     for (const [, { reject }] of this._pending) reject(new Error('pool terminated'));
     this._pending.clear();
   }
+
+  /**
+   * Pre-fetch filter modules into the worker cache.
+   * Fires off dispatch calls for all filterIds so workers load the modules,
+   * then immediately resolves the promises without returning results.
+   * Safe to call multiple times — workers cache modules automatically.
+   */
+  prefetch(filterIds) {
+    for (const filterId of filterIds) {
+      // Fire and forget — each worker will lazy-load the module on first use
+      const fakeTask = {
+        filterId,
+        imageData: { data: new Uint8ClampedArray(4), width: 1, height: 1 },
+        params: {},
+        rawFile: null,
+      };
+      // Use a minimal resolution so the filter returns fast
+      this.dispatch(fakeTask).catch(() => {}); // ignore errors (filters may not handle 1x1)
+    }
+  }
 }

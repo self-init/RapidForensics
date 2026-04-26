@@ -5,17 +5,45 @@ import { FilterWorkerPool } from './workers/pool.js';
 const workerPool = new FilterWorkerPool();
 
 // =====================================================================
+// Helpers
+// =====================================================================
+
+/** Adler-32 checksum of a sampled pixel region — fast cache key for ImageData */
+function imageDataChecksum(imgData) {
+  const { data, width, height } = imgData;
+  // Sample every Nth pixel to O(1) the checksum cost
+  const step = Math.max(1, Math.floor((width * height) / 8192));
+  let a = 1, b = 0;
+  let i = 0;
+  const len = width * height;
+  while (i < len) {
+    const byte = data[i * 4]; // sample red channel only
+    a = (a + byte) % 65521;
+    b = (b + a) % 65521;
+    i += step;
+  }
+  return ((b << 16) | a) >>> 0;
+}
+
+function makeCacheKey(checksum, filterId, params) {
+  const paramStr = JSON.stringify(params);
+  return `${checksum}|${filterId}|${paramStr}`;
+}
+
+// =====================================================================
 // State
 // =====================================================================
 const state = {
   rawFile: null,
   baseCanvas: null,      // current base (HTMLCanvasElement)
   baseImageData: null,   // ImageData of current base
+  baseImageDataChecksum: null, // adler32 of baseImageData pixels, for cache key
   history: [],           // [{ canvas, filterId, presetName, label }]
   activeHistoryIdx: 0,
   currentTabIdx: 0,
   focusedTileIdx: -1,
   tiles: [],
+  tileResultCache: new Map(), // "checksum|filterId|paramsHash" → result
   panelOpen: false,           // tile content loaded in properties panel
   propertiesPanelOpen: true,  // properties panel drawer visible
   historyPanelOpen: true,     // history panel drawer visible
@@ -122,6 +150,8 @@ function loadImageFile(file) {
 
     state.baseCanvas    = canvas;
     state.baseImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    state.baseImageDataChecksum = imageDataChecksum(state.baseImageData);
+    state.tileResultCache = new Map();
 
     state.history = [{ canvas, filterId: null, presetName: null, label: 'Original' }];
     state.activeHistoryIdx = 0;
@@ -307,6 +337,10 @@ function renderGrid() {
 
   updateMemoryInfo();
 
+  // Pre-fetch all filter modules for this tab into worker cache
+  const tabFilterIds = tab.tiles.map(t => t.filterId);
+  workerPool.prefetch(tabFilterIds);
+
   state.tiles.forEach((tile, idx) => {
     const el = buildTileEl(tile, idx);
     tileGrid.appendChild(el);
@@ -417,15 +451,21 @@ async function runTile(idx) {
   tile.loading = true;
 
   try {
-    // Get rawFile as ArrayBuffer (File can't cross worker boundary)
-    const rawFileBuffer = state.rawFile ? await state.rawFile.arrayBuffer() : null;
-
-    const result = await workerPool.dispatch({
-      filterId: tile.filterId,
-      imageData: state.baseImageData,
-      params: tile.params,
-      rawFile: rawFileBuffer,
-    });
+    // Check tile result cache first
+    const cacheKey = makeCacheKey(state.baseImageDataChecksum, tile.filterId, tile.params);
+    let result;
+    if (state.tileResultCache.has(cacheKey)) {
+      result = state.tileResultCache.get(cacheKey);
+    } else {
+      const rawFileBuffer = state.rawFile ? await state.rawFile.arrayBuffer() : null;
+      result = await workerPool.dispatch({
+        filterId: tile.filterId,
+        imageData: state.baseImageData,
+        params: tile.params,
+        rawFile: rawFileBuffer,
+      });
+      state.tileResultCache.set(cacheKey, result);
+    }
 
     tile.resultImageData = result;
     tile.loading = false;
@@ -1020,6 +1060,8 @@ function promote(idx) {
 
   state.baseCanvas    = newCanvas;
   state.baseImageData = tile.resultImageData;
+  state.baseImageDataChecksum = imageDataChecksum(state.baseImageData);
+  state.tileResultCache = new Map();
   state.history       = state.history.slice(0, state.activeHistoryIdx + 1);
   state.history.push({
     canvas:     newCanvas,
@@ -1120,6 +1162,8 @@ function restoreHistory(idx) {
   state.baseImageData = entry.canvas.getContext('2d').getImageData(
     0, 0, entry.canvas.width, entry.canvas.height,
   );
+  state.baseImageDataChecksum = imageDataChecksum(state.baseImageData);
+  state.tileResultCache = new Map();
   renderHistory();
   renderGrid();
 }
