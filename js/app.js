@@ -351,6 +351,11 @@ function buildTileEl(tile, idx) {
     const canvas = document.createElement('canvas');
     wrap.appendChild(canvas);
 
+    const errDiv = document.createElement('div');
+    errDiv.className = 'tile-error-content';
+    errDiv.hidden = true;
+    wrap.appendChild(errDiv);
+
     // Magnifying glass — opens preview
     const zoomBtn = document.createElement('button');
     zoomBtn.className = 'tile-zoom-btn';
@@ -432,16 +437,27 @@ async function runTile(idx) {
   } catch (err) {
     console.error(`Filter ${tile.filterId} failed:`, err);
     tile.loading = false;
-    if (loadingDiv) loadingDiv.style.display = 'none';
+    renderErrorTile(tileEl, err);
+  }
+}
+
+function renderErrorTile(tileEl, err) {
+  const canvas = tileEl.querySelector('canvas');
+  const errDiv = tileEl.querySelector('.tile-error-content');
+  const loadingDiv = tileEl.querySelector('.tile-loading');
+  if (loadingDiv) loadingDiv.style.display = 'none';
+  if (canvas) canvas.hidden = true;
+  if (errDiv) {
+    errDiv.textContent = err.message || String(err);
+    errDiv.hidden = false;
   }
 }
 
 function renderImageTile(tileEl, imageData) {
   const canvas = tileEl.querySelector('canvas');
-  if (!canvas) return;
-  canvas.width  = imageData.width;
-  canvas.height = imageData.height;
-  canvas.getContext('2d').putImageData(imageData, 0, 0);
+  const errDiv = tileEl.querySelector('.tile-error-content');
+  if (errDiv) errDiv.hidden = true;
+  if (canvas) { canvas.hidden = false; canvas.width = imageData.width; canvas.height = imageData.height; canvas.getContext('2d').putImageData(imageData, 0, 0); }
   const loadingDiv = tileEl.querySelector('.tile-loading');
   if (loadingDiv) loadingDiv.style.display = 'none';
 }

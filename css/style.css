@@ -336,6 +336,20 @@ html, body {
 .tile-meta-content .meta-line.sev-alert { color: #e06060; background: rgba(224, 96, 96, 0.08); border-left: 2px solid #e06060; padding-left: 4px; }
 .tile-meta-content .meta-line.sev-alert .meta-key { color: #f08080; }
 
+/* ===================== TILE ERROR ===================== */
+.tile-error-content {
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: #e06060;
+  background: rgba(224, 96, 96, 0.06);
+  border: 1px solid rgba(224, 96, 96, 0.3);
+  border-radius: 3px;
+  margin: 4px;
+}
+
 /* ===================== PARAMETER PANEL ===================== */
 #param-panel {
   width: var(--param-w);
